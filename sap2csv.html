@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>SAP-Budget to CSV-OpenSpending</title>
+	<script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+</head>
+<body>
+	<p id="status"></p>
+
+<script>
+
+$(document).ready(function(){
+	$("#status").append("Loading XML file...<br>");
+
+	$.ajax({
+		type:"GET",
+		url:"hh2014.xml",
+		dataType:"xml",
+		success:function(xml) {
+			$("#status").append("Processing XML file...<br>");
+			parseXML($(xml).context.children);
+		},
+		error:function() {
+			$("#status").append("The XML file could not be processed correctly.<br>");
+		}
+	});
+});
+
+function parseXML(xml)
+{
+	if((1 == xml.length) && ("haushaltsplanung"==xml[0].nodeName)) {
+		var haushaltsplanung = xml[0];
+
+		if((0 < haushaltsplanung.attributes.length) && ("http://www.sap.com/abapxml"==haushaltsplanung.attributes[0].value)) {
+			parseSAP(haushaltsplanung);
+		} else {
+			$("#status").append("Only SAP XML file format can be parsed.<br>");
+		}
+	} else {
+		$("#status").append("Unknown XML file format.<br>");
+	}
+}
+
+function parseSAP(haushaltsplanung)
+{
+	if((0 < haushaltsplanung.childNodes.length) && ("meta"==haushaltsplanung.childNodes[0].nodeName)) {
+		var meta = haushaltsplanung.childNodes[0];
+		var mandant = $(meta).find("mandant");
+		var reporttitel = $(meta).find("reporttitel");
+		var waehrung = $(meta).find("waehrung");
+		var geschaeftsjahre = $(meta).find("geschaeftsjahre");
+
+		var metadata = {
+			client:$(mandant).find("bezeichnung").text(),
+			city:$(mandant).find("ort").text(),
+			title:$(reporttitel).text(),
+			currency:$(waehrung).text(),
+			years:{},
+		};
+
+		$.each($(geschaeftsjahre)[0].children,function(key,value) {
+			metadata.years[value.nodeName] = $(value).text();
+		});
+
+		console.log(metadata);
+
+		$("#status").append("> '"+metadata.title+" "+metadata.years.aktuell+"' von "+metadata.client+" ("+metadata.city+")<br>");
+	} else {
+		$("#status").append("XML file has no metadata.<br>");
+	}
+}
+
+</script>
+
+</body>
+</html>
