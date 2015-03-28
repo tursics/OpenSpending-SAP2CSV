@@ -84,12 +84,12 @@ function parseSAPModule(haushaltsplanung,metadata)
 					// ignore 'Ergebnisplan'
 				} else if("ERGHHT"==typ.value) {
 					// Teilergebnisrechnung
-					parseSAPTable(value,typ.value,metadata)
+					parseSAPPagination(value,typ.value,metadata)
 				} else if("FINHHG"==typ.value) {
 					// ignore 'Finanzplan'
 				} else if("FINHHT"==typ.value) {
 					// Teilfinanzrechnung
-					parseSAPTable(value,typ.value,metadata)
+					parseSAPPagination(value,typ.value,metadata)
 				} else if("INV_EM"==typ.value) {
 					// ignore 'Investitionsuebersicht'
 				} else {
@@ -103,11 +103,32 @@ function parseSAPModule(haushaltsplanung,metadata)
 	}
 }
 
-function parseSAPTable(table,typ,metadata)
+function parseSAPPagination(table,typ,metadata)
 {
-	$("#status").append(typ+"<br>");
-	console.log(table);
+	if((0 < table.childNodes.length) && ("ueberschriften"==table.childNodes[0].nodeName)) {
+		var ueberschriften = table.childNodes[0];
+		var pagination = "";
+		captions = [];
 
+		$.each(ueberschriften.children,function(key,value) {
+			var nr = $(value.children[0]).text();
+			var bezeichnung = $(value.children[1]).text();
+
+			captions.push({pagination:nr,title:bezeichnung});
+			if(pagination.length < nr.length) {
+				pagination = nr;
+			}
+		});
+
+		if( 1 == captions.length) {
+			$("#status").append("<del>"+pagination+" "+typ+"</del><br>");
+		} else {
+			$("#status").append(pagination+" "+typ+"<br>");
+		}
+		console.log(ueberschriften);
+	} else {
+		$("#status").append("XML table has no headlines.<br>");
+	}
 }
 
 </script>
