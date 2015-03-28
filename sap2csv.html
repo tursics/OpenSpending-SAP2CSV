@@ -33,7 +33,7 @@ function parseXML(xml)
 		var haushaltsplanung = xml[0];
 
 		if((0 < haushaltsplanung.attributes.length) && ("http://www.sap.com/abapxml"==haushaltsplanung.attributes[0].value)) {
-			parseSAP(haushaltsplanung);
+			parseSAPMeta(haushaltsplanung);
 		} else {
 			$("#status").append("Only SAP XML file format can be parsed.<br>");
 		}
@@ -42,7 +42,7 @@ function parseXML(xml)
 	}
 }
 
-function parseSAP(haushaltsplanung)
+function parseSAPMeta(haushaltsplanung)
 {
 	if((0 < haushaltsplanung.childNodes.length) && ("meta"==haushaltsplanung.childNodes[0].nodeName)) {
 		var meta = haushaltsplanung.childNodes[0];
@@ -63,12 +63,51 @@ function parseSAP(haushaltsplanung)
 			metadata.years[value.nodeName] = $(value).text();
 		});
 
-		console.log(metadata);
-
 		$("#status").append("> '"+metadata.title+" "+metadata.years.aktuell+"' von "+metadata.client+" ("+metadata.city+")<br>");
+
+		parseSAPModule(haushaltsplanung,metadata);
 	} else {
 		$("#status").append("XML file has no metadata.<br>");
 	}
+}
+
+function parseSAPModule(haushaltsplanung,metadata)
+{
+	if((1 < haushaltsplanung.childNodes.length) && ("module"==haushaltsplanung.childNodes[1].nodeName)) {
+		var module = haushaltsplanung.childNodes[1];
+
+		$.each($(module)[0].children,function(key,value) {
+			if((1 < value.attributes.length) && ("typ"==value.attributes[1].nodeName)) {
+				var typ = value.attributes[1];
+
+				if("ERGHHG"==typ.value) {
+					// ignore 'Ergebnisplan'
+				} else if("ERGHHT"==typ.value) {
+					// Teilergebnisrechnung
+					parseSAPTable(value,typ.value,metadata)
+				} else if("FINHHG"==typ.value) {
+					// ignore 'Finanzplan'
+				} else if("FINHHT"==typ.value) {
+					// Teilfinanzrechnung
+					parseSAPTable(value,typ.value,metadata)
+				} else if("INV_EM"==typ.value) {
+					// ignore 'Investitionsuebersicht'
+				} else {
+					$("#status").append("XML contains an invalid table type: "+typ.value+".<br>");
+					return false;
+				}
+			}
+		});
+	} else {
+		$("#status").append("XML file has no module data.<br>");
+	}
+}
+
+function parseSAPTable(table,typ,metadata)
+{
+	$("#status").append(typ+"<br>");
+	console.log(table);
+
 }
 
 </script>
